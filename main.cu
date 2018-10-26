@@ -1,38 +1,35 @@
 #include <stdio.h>
 //#include <sys/time.h>
 #include <curand_kernel.h>
-<<<<<<< HEAD
-#include <assert.h>
-=======
 #include "sort.h"
->>>>>>> 908c317ec9ee495cecb75ea91085282bc9e18006
 
 #define N 10
-#define N2 20
 
 //TODO cities in const cache
 
-__device__ void randomInit(int *individu, int *cities, curandState_t *state){
+struct Individu {
+    int indexes[N];
+    float score;
+};
+
+__device__ void randomInit(Individu *individu, curandState_t *state){
     bool used[N] = {false};
-    for (int i = 0 ; i < N2 ; i+=2){
+    for (int i = 0 ; i < N ; i++){
         int index = (int)(curand_uniform(state) * N);
         while (used[index])
             index = (index + 1) % N;
         used[index] = true;
-        index *= 2;
-        individu[i] = cities[index];
-        individu[i+1] = cities[index+1];
+        individu->indexes[i] = index;
     }
 }
 
 __global__ void solve(int *cities){
-    extern __shared__ int population[];
+    extern __shared__ Individu population[];
 
     curandState_t state;
     curand_init(threadIdx.x, 0, 0, &state);
 
-    randomInit((int *)(population + (threadIdx.x * N2)), cities, &state);
-
+    randomInit(population + threadIdx.x, &state);
 }
 
 int main() {
@@ -40,7 +37,7 @@ int main() {
     cudaDeviceProp deviceProp;
     cudaGetDeviceProperties(&deviceProp, 0);
     int maxThreadsPerBlock = deviceProp.maxThreadsPerBlock;
-    int cities[N2] = {
+    int cities[N*2] = {
             0, 2,
             1, 9,
             2, 14,
@@ -53,18 +50,18 @@ int main() {
             13, 1
     }; //coordinate of all cities, x, y
     int *dC;
-    int sizeVec = N2 * sizeof(int);
+    int sizeVec = N*2 * sizeof(int);
 
     cudaMalloc(&dC, sizeVec);
     cudaMemcpy(dC, cities, sizeVec, cudaMemcpyHostToDevice);
 
 
-    int nb_threads = (int)(deviceProp.sharedMemPerBlock / sizeof(int) / N2);
+    int nb_threads = deviceProp.sharedMemPerBlock / sizeof(Individu);
     if(nb_threads > maxThreadsPerBlock)
         nb_threads = maxThreadsPerBlock;
     printf("Launching on %d threads\n", nb_threads);
 
-    solve <<<2, nb_threads, nb_threads * sizeof(int) * N2>>>(dC);
+    solve <<<2, nb_threads, nb_threads * sizeof(Individu)>>>(dC);
 //    cudaMemcpy(C, dC, sizeVec, cudaMemcpyDeviceToHost);
     cudaFree(dC);
 
