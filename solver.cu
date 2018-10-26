@@ -11,7 +11,7 @@ __device__ void randomInit(Individu *individu, curandState_t *state){
     }
 }
 
-__global__ void solve(int *cities){
+__global__ void solve(){
     extern __shared__ Individu population[];
 
     curandState_t state;

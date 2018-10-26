@@ -2,41 +2,29 @@
 #include "sort.cuh"
 #include "solver.cuh"
 
-//TODO cities in const cache
-
-
 int main() {
+    // Init random cities
+    float cpu_cities[N][2];
+    for(int i = 0; i < N; ++i)
+    {
+        cpu_cities[i][0] = (float)rand() / RAND_MAX;
+        cpu_cities[i][1] = (float)rand() / RAND_MAX;
+    }
+    cudaMemcpyToSymbol(cities, &cpu_cities, sizeof(float) * N * 2);
+
+    // Init CUDA
     cudaSetDevice(0);
     cudaDeviceProp deviceProp;
     cudaGetDeviceProperties(&deviceProp, 0);
+
+    // Init threads
     int maxThreadsPerBlock = deviceProp.maxThreadsPerBlock;
-    int cities[N*2] = {
-            0, 2,
-            1, 9,
-            2, 14,
-            4, 2,
-            5, 7,
-            8, 5,
-            8, 12,
-            11, 3,
-            12, 11,
-            13, 1
-    }; //coordinate of all cities, x, y
-    int *dC;
-    int sizeVec = N*2 * sizeof(int);
-
-    cudaMalloc(&dC, sizeVec);
-    cudaMemcpy(dC, cities, sizeVec, cudaMemcpyHostToDevice);
-
-
     int nb_threads = deviceProp.sharedMemPerBlock / sizeof(Individu);
     if(nb_threads > maxThreadsPerBlock)
         nb_threads = maxThreadsPerBlock;
     printf("Launching on %d threads\n", nb_threads);
 
-    solve <<<1, nb_threads, nb_threads * sizeof(Individu)>>>(dC);
-//    cudaMemcpy(C, dC, sizeVec, cudaMemcpyDeviceToHost);
-    cudaFree(dC);
+    solve <<<1, nb_threads, nb_threads * sizeof(Individu)>>>();
 
     cudaDeviceReset();
     return 0;
