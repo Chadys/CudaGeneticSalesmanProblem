@@ -1,7 +1,11 @@
 #include <stdio.h>
 //#include <sys/time.h>
 #include <curand_kernel.h>
+<<<<<<< HEAD
 #include <assert.h>
+=======
+#include "sort.h"
+>>>>>>> 908c317ec9ee495cecb75ea91085282bc9e18006
 
 #define N 10
 #define N2 20

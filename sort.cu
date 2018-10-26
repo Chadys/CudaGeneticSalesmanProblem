@@ -1,3 +1,5 @@
+#include "sort.h"
+
 __device__ void swap(int *a, int index1, int index2){
     a[index1] = a[index1] ^ a[index2];
     a[index2] = a[index1] ^ a[index2];
