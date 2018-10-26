@@ -1,6 +1,7 @@
 #include <stdio.h>
 //#include <sys/time.h>
 #include <curand_kernel.h>
+#include <assert.h>
 
 #define N 10
 #define N2 20
@@ -12,7 +13,7 @@ __device__ void randomInit(int *individu, int *cities, curandState_t *state){
     for (int i = 0 ; i < N2 ; i+=2){
         int index = (int)(curand_uniform(state) * N);
         while (used[index])
-            index ++;
+            index = (index + 1) % N;
         used[index] = true;
         index *= 2;
         individu[i] = cities[index];
@@ -21,10 +22,13 @@ __device__ void randomInit(int *individu, int *cities, curandState_t *state){
 }
 
 __global__ void solve(int *cities){
+    extern __shared__ int population[];
+
     curandState_t state;
     curand_init(threadIdx.x, 0, 0, &state);
-    int individu[N2];
-    randomInit(individu, cities, &state);
+
+    randomInit((int *)(population + (threadIdx.x * N2)), cities, &state);
+
 }
 
 int main() {
@@ -50,10 +54,16 @@ int main() {
     cudaMalloc(&dC, sizeVec);
     cudaMemcpy(dC, cities, sizeVec, cudaMemcpyHostToDevice);
 
-    printf("Launching on %d threads\n", maxThreadsPerBlock);
-    solve <<<1, maxThreadsPerBlock>>>(dC);
+
+    int nb_threads = (int)(deviceProp.sharedMemPerBlock / sizeof(int) / N2);
+    if(nb_threads > maxThreadsPerBlock)
+        nb_threads = maxThreadsPerBlock;
+    printf("Launching on %d threads\n", nb_threads);
+
+    solve <<<2, nb_threads, nb_threads * sizeof(int) * N2>>>(dC);
 //    cudaMemcpy(C, dC, sizeVec, cudaMemcpyDeviceToHost);
     cudaFree(dC);
 
+    cudaDeviceReset();
     return 0;
 }
