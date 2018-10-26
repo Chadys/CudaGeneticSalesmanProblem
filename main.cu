@@ -1,6 +1,7 @@
 #include <stdio.h>
 //#include <sys/time.h>
 #include <curand_kernel.h>
+#include "sort.h"
 
 #define N 10
 #define N2 20
