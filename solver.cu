@@ -1,5 +1,18 @@
 #include "solver.cuh"
 
+__device__ void updateScore(Individu *individu)
+{
+    double score = 0.f;
+    int prev_index = individu->path_indexes[0];
+    for(int i = 1; i < N; i++)
+    {
+        int current_index = individu->path_indexes[i];
+        score += powf(cities[current_index][0] - cities[prev_index][0], 2) + powf(cities[current_index][1] - cities[prev_index][1], 2);
+        prev_index = current_index;
+    }
+    individu->score = (float)score;
+}
+
 __device__ void randomInit(Individu *individu, curandState_t *state){
     bool used[N] = {false};
     for (int i = 0 ; i < N ; i++){
