@@ -4,4 +4,4 @@ enable_language(CUDA)
 
 set(CMAKE_CXX_STANDARD 11)
 
-add_executable(CudaGeneticSalesmanProblem main.cu)
+add_executable(CudaGeneticSalesmanProblem main.cu sort.cu)
