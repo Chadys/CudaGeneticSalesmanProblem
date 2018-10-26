@@ -1,25 +1,22 @@
-#include "sort.h"
+#include "sort.cuh"
 
-__device__ void swap(int *a, int index1, int index2){
-    a[index1] = a[index1] ^ a[index2];
-    a[index2] = a[index1] ^ a[index2];
-    a[index1] = a[index1] ^ a[index2];
+__device__ void swap(Individu *p, int index1, int index2){
+    Individu tmp = p[index1];
+    p[index1] = p[index2];
+    p[index2] = tmp;
 }
 
-__device__ void fusion(int *a, int i, int m, int n){
+__device__ void fusion(Individu *p, int i, int m, int n){
     int j = m, w = i;
     while (i < m && j < n)
-        swap(a, w++, a[i] < a[j] ? i++ : j++);
+        swap(p, w++, p[i].score < p[j].score ? i++ : j++);
     while (i < m)
-        swap(a, w++, i++);
+        swap(p, w++, i++);
     while (j < n)
-        swap(a, w++, j++);
+        swap(p, w++, j++);
 }
 
-__global__ void sort(int *a){
-    int index = blockIdx.x * blockDim.x + threadIdx.x;
-    if (index >= N)
-        return;
+__global__ void sort(Individu *p, int index){
     int modulo = 2;
     int nbElt = 1;
 
@@ -27,7 +24,7 @@ __global__ void sort(int *a){
         if (index % modulo == 0){
             int maxElt = index + nbElt * 2;
             maxElt = maxElt < N ? maxElt : N;
-            fusion(a, index, index+nbElt, maxElt);
+            fusion(p, index, index+nbElt, maxElt);
             nbElt = maxElt - index;
             if (nbElt == N)
                 return;

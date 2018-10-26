@@ -1,36 +1,9 @@
-#include <stdio.h>
-//#include <sys/time.h>
-#include <curand_kernel.h>
-#include "sort.h"
-
-#define N 10
+#include "header.cuh"
+#include "sort.cuh"
+#include "solver.cuh"
 
 //TODO cities in const cache
 
-struct Individu {
-    int indexes[N];
-    float score;
-};
-
-__device__ void randomInit(Individu *individu, curandState_t *state){
-    bool used[N] = {false};
-    for (int i = 0 ; i < N ; i++){
-        int index = (int)(curand_uniform(state) * N);
-        while (used[index])
-            index = (index + 1) % N;
-        used[index] = true;
-        individu->indexes[i] = index;
-    }
-}
-
-__global__ void solve(int *cities){
-    extern __shared__ Individu population[];
-
-    curandState_t state;
-    curand_init(threadIdx.x, 0, 0, &state);
-
-    randomInit(population + threadIdx.x, &state);
-}
 
 int main() {
     cudaSetDevice(0);
@@ -61,7 +34,7 @@ int main() {
         nb_threads = maxThreadsPerBlock;
     printf("Launching on %d threads\n", nb_threads);
 
-    solve <<<2, nb_threads, nb_threads * sizeof(Individu)>>>(dC);
+    solve <<<1, nb_threads, nb_threads * sizeof(Individu)>>>(dC);
 //    cudaMemcpy(C, dC, sizeVec, cudaMemcpyDeviceToHost);
     cudaFree(dC);
 
