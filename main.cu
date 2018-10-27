@@ -3,6 +3,12 @@
 #include "solver.cuh"
 
 int main() {
+    // Init CUDA
+    cudaSetDevice(0);
+    cudaDeviceProp deviceProp;
+    cudaGetDeviceProperties(&deviceProp, 0);
+
+
     // Init random cities
     float cpu_cities[N][2];
     for(int i = 0; i < N; ++i)
@@ -12,10 +18,17 @@ int main() {
     }
     cudaMemcpyToSymbol(cities, &cpu_cities, sizeof(float) * N * 2);
 
-    // Init CUDA
-    cudaSetDevice(0);
-    cudaDeviceProp deviceProp;
-    cudaGetDeviceProperties(&deviceProp, 0);
+    // Init gpu migrants
+    Individu cpu_migrants[N];
+    for(int i = 0; i < N; ++i)
+    {
+        cpu_migrants[i].score = -1;
+        for (int j = 0; j < N; ++j)
+        {
+            cpu_migrants[i].path_indexes[j] = j;
+        }
+    }
+    cudaMemcpy(&gpu_migrants, cpu_migrants, sizeof(Individu) * N, cudaMemcpyHostToDevice);
 
     // Init threads
     int maxThreadsPerBlock = deviceProp.maxThreadsPerBlock;

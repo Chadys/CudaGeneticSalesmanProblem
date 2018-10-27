@@ -3,6 +3,8 @@
 
 #include "header.cuh"
 
+__device__ Individu *gpu_migrants;
+
 __constant__ float cities[N][2];
 
 __device__ void randomInit(Individu *individu, curandState_t *state);
