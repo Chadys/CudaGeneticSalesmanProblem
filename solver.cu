@@ -1,5 +1,10 @@
 #include "solver.cuh"
 
+extern __device__ Individu *gpu_migrants;
+
+extern __constant__ float cities[N][2];
+
+
 __device__ void updateScore(Individu *individu)
 {
     double score = 0.f;

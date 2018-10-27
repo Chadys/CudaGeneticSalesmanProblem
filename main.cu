@@ -2,6 +2,10 @@
 #include "sort.cuh"
 #include "solver.cuh"
 
+__device__ Individu *gpu_migrants;
+
+__constant__ float cities[N][2];
+
 int main() {
     // Init CUDA
     cudaSetDevice(0);
