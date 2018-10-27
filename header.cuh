@@ -5,6 +5,7 @@
 #include <stdio.h>
 
 #define N 10
+#define N_GENERATION 100
 
 struct Individu {
     int path_indexes[N];

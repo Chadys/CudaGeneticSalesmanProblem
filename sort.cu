@@ -16,7 +16,7 @@ __device__ void fusion(Individu *p, int i, int m, int n){
         swap(p, w++, j++);
 }
 
-__global__ void sort(Individu *p, int index){
+__device__ void sort(Individu *p, int index){
     int modulo = 2;
     int nbElt = 1;
 
