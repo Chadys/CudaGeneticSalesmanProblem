@@ -14,13 +14,13 @@ __device__ void updateScore(Individu *individu)
         int current_index = individu->path_indexes[i];
         if(threadIdx.x == 0)
         {
-            printf("%d %f %f\n", current_index, cities[current_index][0], cities[current_index][1]);
+            //printf("%d %f %f\n", current_index, cities[current_index][0], cities[current_index][1]);
         }
         score += powf(cities[current_index][0] - cities[prev_index][0], 2) + powf(cities[current_index][1] - cities[prev_index][1], 2);
         prev_index = current_index;
     }
     individu->score = (float)score;
-    //printf("%f\n", (float)score);
+    //printf("%d : score = %f\n", threadIdx.x, (float)score);
 }
 
 __device__ void randomInit(Individu *individu, curandState_t *state){
@@ -46,7 +46,7 @@ __global__ void solve(){
     if (threadIdx.x == 0) {
         for(int i = 0; i < blockDim.x; ++i)
         {
-            //printf("%d : %f\n", i, (population + i)->score);
+            printf("%d : %f\n", i, (population + i)->score);
         }
         /*
         for (int i = 0; i < N; i++) {

@@ -19,7 +19,7 @@ int main() {
     {
         cpu_cities[i][0] = (float)rand() / RAND_MAX;
         cpu_cities[i][1] = (float)rand() / RAND_MAX;
-        printf("(cpu) %f %f\n", cpu_cities[i][0], cpu_cities[i][1]);
+        //printf("(cpu) %f %f\n", cpu_cities[i][0], cpu_cities[i][1]);
     }
     cudaMemcpyToSymbol(cities, cpu_cities, sizeof(float) * N * 2);
 
