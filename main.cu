@@ -2,6 +2,10 @@
 #include "sort.cuh"
 #include "solver.cuh"
 
+__device__ Individu *gpu_migrants;
+
+__constant__ float cities[N][2];
+
 int main() {
     // Init CUDA
     cudaSetDevice(0);
@@ -15,8 +19,9 @@ int main() {
     {
         cpu_cities[i][0] = (float)rand() / RAND_MAX;
         cpu_cities[i][1] = (float)rand() / RAND_MAX;
+        //printf("(cpu) %f %f\n", cpu_cities[i][0], cpu_cities[i][1]);
     }
-    cudaMemcpyToSymbol(cities, &cpu_cities, sizeof(float) * N * 2);
+    cudaMemcpyToSymbol(cities, cpu_cities, sizeof(float) * N * 2);
 
     // Init gpu migrants
     Individu cpu_migrants[N];
