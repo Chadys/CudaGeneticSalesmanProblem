@@ -1,4 +1,9 @@
 #include "sort.cuh"
+#include "header.cuh"
+
+extern Individu *gpu_migrants;
+
+extern __constant__ float cities[N][2];
 
 __device__ void swap(Individu *p, int index1, int index2){
     Individu tmp = p[index1];
