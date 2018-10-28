@@ -41,6 +41,7 @@ int main() {
     int nb_threads = deviceProp.sharedMemPerBlock / sizeof(Individu);
     if(nb_threads > maxThreadsPerBlock)
         nb_threads = maxThreadsPerBlock;
+    //nb_threads /;
     printf("Launching on %d threads\n", nb_threads);
 
     solve <<<1, nb_threads, nb_threads * sizeof(Individu)>>>();
