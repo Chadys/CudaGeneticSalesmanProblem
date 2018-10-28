@@ -1,8 +1,9 @@
 #include "header.cuh"
 #include "sort.cuh"
 #include "solver.cuh"
+#include <helper_cuda.h>
 
-__device__ Individu *gpu_migrants;
+Individu *gpu_migrants;
 
 __constant__ float cities[N][2];
 
@@ -21,8 +22,7 @@ int main() {
         cpu_cities[i][1] = (float)rand() / RAND_MAX;
         //printf("(cpu) %f %f\n", cpu_cities[i][0], cpu_cities[i][1]);
     }
-    cudaMemcpyToSymbol(cities, cpu_cities, sizeof(float) * N * 2);
-
+    checkCudaErrors(cudaMemcpyToSymbol(cities, cpu_cities, sizeof(float) * N * 2));
     // Init gpu migrants
     Individu cpu_migrants[N];
     for(int i = 0; i < N; ++i)
@@ -33,7 +33,8 @@ int main() {
             cpu_migrants[i].path_indexes[j] = j;
         }
     }
-    cudaMemcpy(&gpu_migrants, cpu_migrants, sizeof(Individu) * N, cudaMemcpyHostToDevice);
+    checkCudaErrors(cudaMalloc(&gpu_migrants, sizeof(Individu) * N));
+    checkCudaErrors(cudaMemcpy(gpu_migrants, cpu_migrants, sizeof(Individu) * N, cudaMemcpyHostToDevice));
 
     // Init threads
     int maxThreadsPerBlock = deviceProp.maxThreadsPerBlock;
@@ -43,7 +44,7 @@ int main() {
     printf("Launching on %d threads\n", nb_threads);
 
     solve <<<1, nb_threads, nb_threads * sizeof(Individu)>>>();
-
+    cudaDeviceSynchronize();
     cudaDeviceReset();
     return 0;
 }
