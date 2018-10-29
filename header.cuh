@@ -4,11 +4,14 @@
 #include <curand_kernel.h>
 #include <stdio.h>
 
-#define N 10
-#define N_GENERATION 100
+#define N_CITIES 10
+#define N_ISLAND 1
+#define N_GENERATION 1
+
+extern __constant__ float cities[N_CITIES][2];
 
 struct Individu {
-    int path_indexes[N];
+    int path_indexes[N_CITIES];
     float score;
 };
 

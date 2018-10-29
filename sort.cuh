@@ -5,6 +5,7 @@
 
 __device__ void swap(Individu *p, int index1, int index2);
 __device__ void fusion(Individu *p, int i, int m, int n);
-__device__ void sort(Individu *p, int index);
+__device__ void merge_sort(Individu *population);
+__device__ void bubble_sort(Individu *population);
 
 #endif //CUDAGENETICSALESMANPROBLEM_SORT_H

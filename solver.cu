@@ -1,48 +1,15 @@
 #include "solver.cuh"
-#include "sort.cuh"
-#include "header.cuh"
-#include <assert.h>
-extern Individu *gpu_migrants;
-
-extern __constant__ float cities[N][2];
-
-__device__ void bubble_sort(Individu *population)
-{
-    if((threadIdx.x % 2) == 0)
-    {
-        for(int i = 0; i < blockDim.x; i++)
-        {
-            __syncthreads();
-            int even_odd = i % 2;
-            int tab_index = threadIdx.x + even_odd;
-
-            assert(tab_index != blockDim.x);
-            if(tab_index != blockDim.x - 1)
-            {
-                if(population[tab_index].score > population[tab_index + 1].score)
-                {
-                    Individu tmp = population[tab_index];
-                    population[tab_index] = population[tab_index + 1];
-                    population[tab_index + 1] = tmp;
-                }
-                assert(population[tab_index].score <= population[tab_index + 1].score);
-            }
-        }
-    }
-}
 
 __device__ void updateScore(Individu *individu)
 {
     double score = 0.f;
     int prev_index = individu->path_indexes[0];
-    for(int i = 1; i < N; i++)
-    {
+    for(int i = 1; i < N_CITIES; i++) {
         int current_index = individu->path_indexes[i];
-        if(threadIdx.x == 0)
-        {
-            //printf("%d %f %f\n", current_index, cities[current_index][0], cities[current_index][1]);
-        }
-        score += powf(cities[current_index][0] - cities[prev_index][0], 2) + powf(cities[current_index][1] - cities[prev_index][1], 2);
+//        if(threadIdx.x == 0) {
+//            printf("%d %f %f\n", current_index, cities[current_index][0], cities[current_index][1]);
+//        }
+        score += pow(cities[current_index][0] - cities[prev_index][0], 2) + pow(cities[current_index][1] - cities[prev_index][1], 2);
         prev_index = current_index;
     }
     individu->score = (float)score;
@@ -50,17 +17,17 @@ __device__ void updateScore(Individu *individu)
 }
 
 __device__ void randomInit(Individu *individu, curandState_t *state){
-    bool used[N] = {false};
-    for (int i = 0 ; i < N ; i++){
-        int index = (int)(curand_uniform(state) * N);
+    bool used[N_CITIES] = {false};
+    for (int i = 0 ; i < N_CITIES ; i++) {
+        int index = (int)(curand_uniform(state) * N_CITIES);
         while (used[index])
-            index = (index + 1) % N;
+            index = (index + 1) % N_CITIES;
         used[index] = true;
         individu->path_indexes[i] = index;
     }
 }
 
-__global__ void solve()
+__global__ void solve(Individu *migrants)
 {
     extern __shared__ Individu population[];
 
@@ -68,11 +35,17 @@ __global__ void solve()
     curand_init(threadIdx.x, 0, 0, &state);
 
     randomInit(population + threadIdx.x, &state);
-    updateScore(&population[threadIdx.x]);
+    updateScore(population + threadIdx.x);
+    __syncthreads();
+    bubble_sort(population);
+    __syncthreads();
 
     // Main generation loop
-    for(int i = 0; i < 1 /* N_GENERATION */; i++)
-    {
+    for(int i = 0; i < N_GENERATION ; i++) {
+        if (threadIdx.x == 0) {
+            migrants[blockIdx.x] = population[blockDim.x-1];
+        }
+        //TODO croisement mutation migration etc
         updateScore(&population[threadIdx.x]);
         __syncthreads();
         bubble_sort(population);
