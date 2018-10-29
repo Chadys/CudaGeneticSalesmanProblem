@@ -8,6 +8,9 @@
 #define N_ISLAND 1
 #define N_GENERATION 1
 
+#define PROBA_K 5.0
+
+
 extern __constant__ float cities[N_CITIES][2];
 
 struct Individu {

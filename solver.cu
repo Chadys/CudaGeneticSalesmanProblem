@@ -16,6 +16,11 @@ __device__ void updateScore(Individu *individu)
     //printf("%d : score = %f\n", threadIdx.x, (float)score);
 }
 
+__device__ float isGonnaDie(curandState_t *state, float position){
+      float powk = pow(position, PROBA_K);
+      return (powk - (powk / (PROBA_K)) / PROBA_K * 5);
+}
+
 __device__ void randomInit(Individu *individu, curandState_t *state){
     bool used[N_CITIES] = {false};
     for (int i = 0 ; i < N_CITIES ; i++) {
@@ -40,36 +45,27 @@ __global__ void solve(Individu *migrants)
     bubble_sort(population);
     __syncthreads();
 
+
     // Main generation loop
     for(int i = 0; i < N_GENERATION ; i++) {
         if (threadIdx.x == 0) {
             migrants[blockIdx.x] = population[blockDim.x-1];
         }
+
+        float position_i = (float)(blockDim.x - threadIdx.x) / ((float)blockDim.x + 1.0);
+        float proba = isGonnaDie(&state, position_i);
+        if(curand_uniform(&state) < proba) {
+            // This guy is gonna die
+            printf("%d \n", threadIdx.x);
+        }
+
+        /*
         //TODO croisement mutation migration etc
         updateScore(&population[threadIdx.x]);
         __syncthreads();
         bubble_sort(population);
         __syncthreads();
+         */
     }
-
-    if (threadIdx.x == 0) {
-        for (int i = 0; i < blockDim.x; ++i) {
-            printf("%d : %f\n", i, (population + i)->score);
-        }
-    }
-    /*
-
-    printf("ok\n");
-
-    if (threadIdx.x == 0) {
-        for(int i = 0; i < blockDim.x; ++i)
-        {
-            printf("%d : %f\n", i, (population + i)->score);
-        }
-        for (int i = 0; i < N; i++) {
-            printf("%d : %f\n", (population + threadIdx.x)->path_indexes[i]);
-        }
-    }
-     */
 
 }

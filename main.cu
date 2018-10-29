@@ -39,7 +39,6 @@ int main() {
     if(nb_threads > maxThreadsPerBlock)
         nb_threads = maxThreadsPerBlock;
     printf("Launching on %d threads\n", nb_threads);
-
     solve <<<N_ISLAND, nb_threads, nb_threads * sizeof(Individu)>>>(gpu_migrants);
     cudaDeviceSynchronize();
     cudaDeviceReset();
