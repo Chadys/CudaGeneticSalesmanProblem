@@ -4,12 +4,12 @@
 #include <curand_kernel.h>
 #include <stdio.h>
 
-#define N_CITIES 10
+#define N_CITIES 50
 #define N_ISLAND 1
 #define N_GENERATION 1
 
-#define PROBA_K 5.0
-
+#define PROBA_K 30.0
+#define PROBA_SELECTION 0.2
 
 extern __constant__ float cities[N_CITIES][2];
 
