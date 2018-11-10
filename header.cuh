@@ -10,6 +10,7 @@
 
 #define PROBA_K 30.0
 #define PROBA_SELECTION 0.2
+#define PROBA_MUTATION 0.01
 
 extern __constant__ float cities[N_CITIES][2];
 

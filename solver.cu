@@ -22,6 +22,10 @@ __device__ bool isGonnaDie(curandState_t *state){
     return curand_uniform(state) < probaToDie;
 }
 
+__device__ bool isMutating(curandState_t *state){
+    return curand_uniform(state) < PROBA_MUTATION;
+}
+
 __device__ void randomInit(Individu *individu, curandState_t *state){
     bool used[N_CITIES] = {false};
     for (int i = 0 ; i < N_CITIES ; i++) {
@@ -33,7 +37,14 @@ __device__ void randomInit(Individu *individu, curandState_t *state){
     }
 }
 
-__device__ void select_parents(Individu *individu, curandState_t *state, int *parents, int numbersOfParents) {
+__device__ void selectMutation(curandState_t *state, unsigned short mutation[2]) {
+    mutation[0] = (unsigned short)(curand_uniform(state) * N_CITIES);
+    mutation[1] = (unsigned short)(curand_uniform(state) * N_CITIES);
+    if (mutation[1] == mutation[0])
+        mutation[1] = (unsigned short)((mutation[1] + 1) % N_CITIES);
+}
+
+__device__ void selectParents(Individu *individu, curandState_t *state, int *parents, int numbersOfParents) {
     int current_parent = 0;
     while (current_parent < numbersOfParents) {
         for(int i = blockDim.x - 1; i >= 0; --i) {
@@ -60,6 +71,12 @@ __device__ void mixParents(Individu *population, curandState_t *state, int repla
     }
 }
 
+__device__ void swapCities(Individu *ind, unsigned short citiesIndex[2]){
+    ind->path_indexes[citiesIndex[0]] ^= ind->path_indexes[citiesIndex[1]];
+    ind->path_indexes[citiesIndex[1]] ^= ind->path_indexes[citiesIndex[0]];
+    ind->path_indexes[citiesIndex[0]] ^= ind->path_indexes[citiesIndex[1]];
+}
+
 __device__ void printPath(Individu I) {
     for(int i = 0; i < N_CITIES; i++) {
         printf("%2hu ", I.path_indexes[i]);
@@ -68,6 +85,10 @@ __device__ void printPath(Individu I) {
 }
 
 __global__ void solve(Individu *migrants) {
+//    extern __shared__ Individu ext[];
+//    Individu *population = ext;
+//    bool *isNotInPath = ext + blockDim.x;
+//    bool *isDoublon = isNotInPath + N_CITIES;
     extern __shared__ Individu population[];
 
     curandState_t state;
@@ -91,16 +112,21 @@ __global__ void solve(Individu *migrants) {
 
         if(isGonnaDie(&state)) {
             int parents[3];
-            select_parents(population, &state, parents, 3);
-//            printf("%d is dying. New parents : %d & %d & %d\n", threadIdx.x, parents[0], parents[1], parents[2]);
+            selectParents(population, &state, parents, 3);
+            printf("%d is dying. New parents : %d & %d & %d\n", threadIdx.x, parents[0], parents[1], parents[2]);
 //            printPath(population[parents[0]]);
 //            printPath(population[parents[1]]);
 //            printPath(population[parents[2]]);
             mixParents(population, &state, threadIdx.x, parents, 3);
 //            printPath(population[threadIdx.x]);
+        } else if(isMutating(&state)) {
+            printf("%d is mutating.\n", threadIdx.x);
+            unsigned short citiesToBeExchanged[2];
+            selectMutation(&state, citiesToBeExchanged);
+            swapCities(population+threadIdx.x, citiesToBeExchanged);
         }
         /*
-        //TODO croisement mutation migration etc
+        //TODO migration
         updateScore(&population[threadIdx.x]);
         __syncthreads();
         bubble_sort(population);
