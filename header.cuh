@@ -14,7 +14,7 @@
 extern __constant__ float cities[N_CITIES][2];
 
 struct Individu {
-    int path_indexes[N_CITIES];
+    unsigned short path_indexes[N_CITIES];
     float score;
 };
 

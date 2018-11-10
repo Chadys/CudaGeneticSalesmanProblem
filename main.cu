@@ -5,6 +5,19 @@
 
 __constant__ float cities[N_CITIES][2];
 
+int getMaxNbThread(cudaDeviceProp deviceProp){
+    int quantity_in_each_thread = sizeof(Individu);
+    int memory_available = deviceProp.sharedMemPerBlock; //TODO substract size of objects put in shared memory independently of thread number
+
+    int nb_threads = memory_available / quantity_in_each_thread;
+    int maxThreadsPerBlock = deviceProp.maxThreadsPerBlock;
+
+    if(nb_threads > maxThreadsPerBlock)
+        nb_threads = maxThreadsPerBlock;
+
+    return nb_threads;
+}
+
 int main() {
     // Init CUDA
     cudaSetDevice(0);
@@ -22,25 +35,14 @@ int main() {
     checkCudaErrors(cudaMemcpyToSymbol(cities, cpu_cities, sizeof(float) * N_CITIES * 2));
     // Init gpu migrants
     Individu *gpu_migrants;
-    Individu cpu_migrants[N_ISLAND];
-
-//    for(int i = 0; i < N_ISLAND; ++i) {
-//        cpu_migrants[i].score = -1;
-//        for (int j = 0; j < N_CITIES; ++j) {
-//            cpu_migrants[i].path_indexes[j] = j;
-//        }
-//    }
     checkCudaErrors(cudaMalloc(&gpu_migrants, sizeof(Individu) * N_ISLAND));
-    checkCudaErrors(cudaMemcpy(gpu_migrants, cpu_migrants, sizeof(Individu) * N_ISLAND, cudaMemcpyHostToDevice));
 
     // Init threads
-    int maxThreadsPerBlock = deviceProp.maxThreadsPerBlock;
-    int nb_threads = deviceProp.sharedMemPerBlock / sizeof(Individu);
-    if(nb_threads > maxThreadsPerBlock)
-        nb_threads = maxThreadsPerBlock;
+    int nb_threads = getMaxNbThread(deviceProp);
     printf("Launching on %d threads\n", nb_threads);
     solve <<<N_ISLAND, nb_threads, nb_threads * sizeof(Individu)>>>(gpu_migrants);
     cudaDeviceSynchronize();
+    cudaFree(gpu_migrants);
     cudaDeviceReset();
     return 0;
 }

@@ -1,7 +1,6 @@
 #include "solver.cuh"
 
-__device__ void updateScore(Individu *individu)
-{
+__device__ void updateScore(Individu *individu) {
     double score = 0.f;
     int prev_index = individu->path_indexes[0];
     for(int i = 1; i < N_CITIES; i++) {
@@ -16,31 +15,29 @@ __device__ void updateScore(Individu *individu)
     //printf("%d : score = %f\n", threadIdx.x, (float)score);
 }
 
-__device__ float isGonnaDie(curandState_t *state, float position){
-      float powk = pow(position, PROBA_K);
-      return 0.75 * powk;//(powk - (powk / (PROBA_K))) / PROBA_K;
+__device__ bool isGonnaDie(curandState_t *state){
+    float position = 1 - ((float)(threadIdx.x) / (blockDim.x - 1)); //first thread is 1.0, last is 0.0
+    float powk = pow(position, PROBA_K);
+    float probaToDie =  0.75f * powk;//(powk - (powk / (PROBA_K))) / PROBA_K;
+    return curand_uniform(state) < probaToDie;
 }
 
 __device__ void randomInit(Individu *individu, curandState_t *state){
     bool used[N_CITIES] = {false};
     for (int i = 0 ; i < N_CITIES ; i++) {
-        int index = (int)(curand_uniform(state) * N_CITIES);
+        unsigned short index = (unsigned short)(curand_uniform(state) * N_CITIES);
         while (used[index])
-            index = (index + 1) % N_CITIES;
+            index = (unsigned short)((index + 1) % N_CITIES);
         used[index] = true;
         individu->path_indexes[i] = index;
     }
 }
 
-__device__ void select_parents(Individu *individu, curandState_t *state, int *parents, int numbersOfParents)
-{
+__device__ void select_parents(Individu *individu, curandState_t *state, int *parents, int numbersOfParents) {
     int current_parent = 0;
-    while (current_parent < numbersOfParents)
-    {
-        for(int i = blockDim.x - 1; i >= 0; --i)
-        {
-            if(curand_uniform(state) < PROBA_SELECTION)
-            {
+    while (current_parent < numbersOfParents) {
+        for(int i = blockDim.x - 1; i >= 0; --i) {
+            if(curand_uniform(state) < PROBA_SELECTION) {
                 parents[current_parent++] = i;
                 break;
             }
@@ -48,35 +45,29 @@ __device__ void select_parents(Individu *individu, curandState_t *state, int *pa
     }
 }
 
-__device__ void mixParents(Individu *population, curandState_t *state, int replaced_index, int *parents, int numbersOfParents)
-{
+__device__ void mixParents(Individu *population, curandState_t *state, int replaced_index, int *parents, int numbersOfParents) {
     int chunk_size = ceil((float)N_CITIES / numbersOfParents);
     int cities_cout = 0;
-    while(cities_cout < N_CITIES)
-    {
+    while(cities_cout < N_CITIES) {
         int selected_parent = parents[curand(state) % numbersOfParents];//(chunk_size * 2)
         int taken = curand(state) % (chunk_size * 2);
         if(cities_cout + taken > N_CITIES)
             taken = N_CITIES - cities_cout; // si on dépasse, on prend le reste
-        for(int i = cities_cout; i < cities_cout + taken; ++i)
-        {
+        for(int i = cities_cout; i < cities_cout + taken; ++i) {
             population[replaced_index].path_indexes[i] = population[selected_parent].path_indexes[i];
         }
         cities_cout += taken;
     }
 }
 
-__device__ void printPath(Individu I)
-{
-    for(int i = 0; i < N_CITIES; i++)
-    {
-        printf("%2d ", I.path_indexes[i]);
+__device__ void printPath(Individu I) {
+    for(int i = 0; i < N_CITIES; i++) {
+        printf("%2hu ", I.path_indexes[i]);
     }
     printf("\n");
 }
 
-__global__ void solve(Individu *migrants)
-{
+__global__ void solve(Individu *migrants) {
     extern __shared__ Individu population[];
 
     curandState_t state;
@@ -86,6 +77,7 @@ __global__ void solve(Individu *migrants)
     updateScore(population + threadIdx.x);
     __syncthreads();
     bubble_sort(population);
+    //TODO replace with better sort
     __syncthreads();
 
 
@@ -94,62 +86,19 @@ __global__ void solve(Individu *migrants)
         __syncthreads();
         if (threadIdx.x == 0) {
             printf("GENERATION %d\n", i);
-
-            for(int j = 0; j < blockDim.x; j++)
-            {
-                float position_0_1 = 1 - ((float)(j) / ((float)blockDim.x - 1));
-                float proba = isGonnaDie(&state, position_0_1);
-                if(curand_uniform(&state) < proba) {
-                    int parents[3];
-                    select_parents(population, &state, parents, 3);
-                    printf("%d is dying. New parents : %d & %d & %d\n", j, parents[0], parents[1], parents[2]);
-                    printPath(population[parents[0]]);
-                    printPath(population[parents[1]]);
-                    printPath(population[parents[2]]);
-                    mixParents(population, &state, threadIdx.x, parents, 3);
-                    printPath(population[threadIdx.x]);
-                }
-            }
-
+//            migrants[blockIdx.x] = population[blockDim.x-1];
         }
 
-        /*
-        float position_0_1 = 1 - ((float)(threadIdx.x) / ((float)blockDim.x - 1));
-        float proba = isGonnaDie(&state, position_0_1);
-        if(curand_uniform(&state) < proba) {
+        if(isGonnaDie(&state)) {
             int parents[3];
             select_parents(population, &state, parents, 3);
-            printf("%d is dying. New parents : %d & %d\n", threadIdx.x, parents[0], parents[1]);
+//            printf("%d is dying. New parents : %d & %d & %d\n", threadIdx.x, parents[0], parents[1], parents[2]);
+//            printPath(population[parents[0]]);
+//            printPath(population[parents[1]]);
+//            printPath(population[parents[2]]);
+            mixParents(population, &state, threadIdx.x, parents, 3);
+//            printPath(population[threadIdx.x]);
         }
-         */
-
-
-
-
-        /*
-        if (threadIdx.x == 0) {
-            printf("Generation %d\n", i);
-            migrants[blockIdx.x] = population[blockDim.x-1];
-            for(int j = 0; j < blockDim.x; ++j)
-            {
-                float position_i = (float)(j) / ((float)blockDim.x - 1);
-                float proba = isGonnaDie(&state, position_i);
-                if(curand_uniform(&state) < proba) {
-                    // This guy is gonna die
-                    printf("dying %d (%f : %f)\n", j, position_i, proba);
-                }
-            }
-        }
-         */
-
-
-        /*float position_i = (float)(blockDim.x - threadIdx.x) / ((float)blockDim.x + 1.0);
-        float proba = isGonnaDie(&state, position_i);
-        if(curand_uniform(&state) < proba) {
-            // This guy is gonna die
-            printf("dying %d \n", threadIdx.x);
-        }*/
-
         /*
         //TODO croisement mutation migration etc
         updateScore(&population[threadIdx.x]);
