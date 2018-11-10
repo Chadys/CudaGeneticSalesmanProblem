@@ -5,7 +5,7 @@
 
 __constant__ float cities[N_CITIES][2];
 
-int getMaxNbThread(cudaDeviceProp deviceProp){
+int get_nb_max_thread(cudaDeviceProp deviceProp){
     int quantity_in_each_thread = sizeof(Individu);
     int memory_available = deviceProp.sharedMemPerBlock; //TODO substract size of objects put in shared memory independently of thread number
 
@@ -38,7 +38,7 @@ int main() {
     checkCudaErrors(cudaMalloc(&gpu_migrants, sizeof(Individu) * N_ISLAND));
 
     // Init threads
-    int nb_threads = getMaxNbThread(deviceProp);
+    int nb_threads = get_nb_max_thread(deviceProp);
     printf("Launching on %d threads\n", nb_threads);
     solve <<<N_ISLAND, nb_threads, nb_threads * sizeof(Individu)>>>(gpu_migrants);
     cudaDeviceSynchronize();

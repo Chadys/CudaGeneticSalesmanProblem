@@ -1,50 +1,50 @@
 #include "solver.cuh"
 
-__device__ void updateScore(Individu *individu) {
+__device__ void update_score(Individu *individu) {
     double score = 0.f;
-    int prev_index = individu->path_indexes[0];
+    int prevIndex = individu->pathIndexes[0];
     for(int i = 1; i < N_CITIES; i++) {
-        int current_index = individu->path_indexes[i];
+        int current_index = individu->pathIndexes[i];
 //        if(threadIdx.x == 0) {
 //            printf("%d %f %f\n", current_index, cities[current_index][0], cities[current_index][1]);
 //        }
-        score += pow(cities[current_index][0] - cities[prev_index][0], 2) + pow(cities[current_index][1] - cities[prev_index][1], 2);
-        prev_index = current_index;
+        score += pow(cities[current_index][0] - cities[prevIndex][0], 2) + pow(cities[current_index][1] - cities[prevIndex][1], 2);
+        prevIndex = current_index;
     }
     individu->score = (float)score;
     //printf("%d : score = %f\n", threadIdx.x, (float)score);
 }
 
-__device__ bool isGonnaDie(curandState_t *state){
+__device__ bool is_gonna_die(curandState_t *state){
     float position = 1 - ((float)(threadIdx.x) / (blockDim.x - 1)); //first thread is 1.0, last is 0.0
-    float powk = pow(position, PROBA_K);
-    float probaToDie =  0.75f * powk;//(powk - (powk / (PROBA_K))) / PROBA_K;
+    float powK = pow(position, PROBA_K);
+    float probaToDie =  0.75f * powK;//(powk - (powk / (PROBA_K))) / PROBA_K;
     return curand_uniform(state) < probaToDie;
 }
 
-__device__ bool isMutating(curandState_t *state){
+__device__ bool is_mutating(curandState_t *state){
     return curand_uniform(state) < PROBA_MUTATION;
 }
 
-__device__ void randomInit(Individu *individu, curandState_t *state){
+__device__ void random_init(Individu *individu, curandState_t *state){
     bool used[N_CITIES] = {false};
     for (int i = 0 ; i < N_CITIES ; i++) {
         unsigned short index = (unsigned short)(curand_uniform(state) * N_CITIES);
         while (used[index])
             index = (unsigned short)((index + 1) % N_CITIES);
         used[index] = true;
-        individu->path_indexes[i] = index;
+        individu->pathIndexes[i] = index;
     }
 }
 
-__device__ void selectMutation(curandState_t *state, unsigned short mutation[2]) {
+__device__ void select_mutation(curandState_t *state, unsigned short *mutation) {
     mutation[0] = (unsigned short)(curand_uniform(state) * N_CITIES);
     mutation[1] = (unsigned short)(curand_uniform(state) * N_CITIES);
     if (mutation[1] == mutation[0])
         mutation[1] = (unsigned short)((mutation[1] + 1) % N_CITIES);
 }
 
-__device__ void selectParents(Individu *individu, curandState_t *state, int *parents, int numbersOfParents) {
+__device__ void select_parents(curandState_t *state, int *parents, int numbersOfParents) {
     int current_parent = 0;
     while (current_parent < numbersOfParents) {
         for(int i = blockDim.x - 1; i >= 0; --i) {
@@ -56,30 +56,29 @@ __device__ void selectParents(Individu *individu, curandState_t *state, int *par
     }
 }
 
-__device__ void mixParents(Individu *population, curandState_t *state, int replaced_index, int *parents, int numbersOfParents) {
-    int chunk_size = ceil((float)N_CITIES / numbersOfParents);
-    int cities_cout = 0;
-    while(cities_cout < N_CITIES) {
-        int selected_parent = parents[curand(state) % numbersOfParents];//(chunk_size * 2)
-        int taken = curand(state) % (chunk_size * 2);
-        if(cities_cout + taken > N_CITIES)
-            taken = N_CITIES - cities_cout; // si on dépasse, on prend le reste
-        for(int i = cities_cout; i < cities_cout + taken; ++i) {
-            population[replaced_index].path_indexes[i] = population[selected_parent].path_indexes[i];
+__device__ void mix_parents(Individu *population, curandState_t *state, int replacedIndex, int *parents,
+                            int numbersOfParents) {
+    int chunkSize = ceil((float)N_CITIES / numbersOfParents);
+    for (int citiesCount = 0 ; citiesCount < N_CITIES ; citiesCount += taken) {
+        int selected_parent = parents[curand(state) % numbersOfParents];//(chunkSize * 2)
+        int taken = curand(state) % (chunkSize * 2);
+        if(citiesCount + taken > N_CITIES)
+            taken = N_CITIES - citiesCount; // si on dépasse, on prend le reste
+        for(int i = citiesCount; i < citiesCount + taken; ++i) {
+            population[replacedIndex].pathIndexes[i] = population[selected_parent].pathIndexes[i];
         }
-        cities_cout += taken;
     }
 }
 
-__device__ void swapCities(Individu *ind, unsigned short citiesIndex[2]){
-    ind->path_indexes[citiesIndex[0]] ^= ind->path_indexes[citiesIndex[1]];
-    ind->path_indexes[citiesIndex[1]] ^= ind->path_indexes[citiesIndex[0]];
-    ind->path_indexes[citiesIndex[0]] ^= ind->path_indexes[citiesIndex[1]];
+__device__ void swap_cities(Individu *ind, unsigned short *citiesIndex){
+    ind->pathIndexes[citiesIndex[0]] ^= ind->pathIndexes[citiesIndex[1]];
+    ind->pathIndexes[citiesIndex[1]] ^= ind->pathIndexes[citiesIndex[0]];
+    ind->pathIndexes[citiesIndex[0]] ^= ind->pathIndexes[citiesIndex[1]];
 }
 
-__device__ void printPath(Individu I) {
+__device__ void print_path(Individu ind) {
     for(int i = 0; i < N_CITIES; i++) {
-        printf("%2hu ", I.path_indexes[i]);
+        printf("%2hu ", ind.pathIndexes[i]);
     }
     printf("\n");
 }
@@ -94,8 +93,8 @@ __global__ void solve(Individu *migrants) {
     curandState_t state;
     curand_init(threadIdx.x, 0, 0, &state);
 
-    randomInit(population + threadIdx.x, &state);
-    updateScore(population + threadIdx.x);
+    random_init(population + threadIdx.x, &state);
+    update_score(population + threadIdx.x);
     __syncthreads();
     bubble_sort(population);
     //TODO replace with better sort
@@ -110,24 +109,24 @@ __global__ void solve(Individu *migrants) {
 //            migrants[blockIdx.x] = population[blockDim.x-1];
         }
 
-        if(isGonnaDie(&state)) {
+        if(is_gonna_die(&state)) {
             int parents[3];
-            selectParents(population, &state, parents, 3);
+            select_parents(population, &state, parents, 3);
             printf("%d is dying. New parents : %d & %d & %d\n", threadIdx.x, parents[0], parents[1], parents[2]);
-//            printPath(population[parents[0]]);
-//            printPath(population[parents[1]]);
-//            printPath(population[parents[2]]);
-            mixParents(population, &state, threadIdx.x, parents, 3);
-//            printPath(population[threadIdx.x]);
-        } else if(isMutating(&state)) {
+//            print_path(population[parents[0]]);
+//            print_path(population[parents[1]]);
+//            print_path(population[parents[2]]);
+            mix_parents(population, &state, threadIdx.x, parents, 3);
+//            print_path(population[threadIdx.x]);
+        } else if(is_mutating(&state)) {
             printf("%d is mutating.\n", threadIdx.x);
             unsigned short citiesToBeExchanged[2];
-            selectMutation(&state, citiesToBeExchanged);
-            swapCities(population+threadIdx.x, citiesToBeExchanged);
+            select_mutation(&state, citiesToBeExchanged);
+            swap_cities(population + threadIdx.x, citiesToBeExchanged);
         }
         /*
         //TODO migration
-        updateScore(&population[threadIdx.x]);
+        update_score(&population[threadIdx.x]);
         __syncthreads();
         bubble_sort(population);
         __syncthreads();
