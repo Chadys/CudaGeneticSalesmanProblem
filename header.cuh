@@ -16,6 +16,7 @@ extern __constant__ float cities[N_CITIES][2];
 struct Individu {
     unsigned short path_indexes[N_CITIES];
     float score;
+    bool isGonnaDie;
 };
 
 #endif //CUDAGENETICSALESMANPROBLEM_HEADER_H

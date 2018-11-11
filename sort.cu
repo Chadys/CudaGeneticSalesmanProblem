@@ -1,6 +1,9 @@
 #include "sort.cuh"
 #include "header.cuh"
 
+
+//extern __constant__ float cities[N_CITIES][2];
+
 __device__ void swap(Individu *p, int index1, int index2){
     Individu tmp = p[index1];
     p[index1] = p[index2];
@@ -44,7 +47,7 @@ __device__ void bubble_sort(Individu *population){
             __syncthreads();
             int tab_index = threadIdx.x + even;
 
-            if(tab_index != blockDim.x - 1) {
+            if(tab_index < blockDim.x - 1) {
                 if(population[tab_index].score > population[tab_index + 1].score) {
                     swap(population, tab_index, tab_index+1);
                 }

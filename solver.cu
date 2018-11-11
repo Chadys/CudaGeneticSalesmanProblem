@@ -67,19 +67,106 @@ __device__ void printPath(Individu I) {
     printf("\n");
 }
 
-__global__ void solve(Individu *migrants) {
-    extern __shared__ Individu population[];
 
-    curandState_t state;
-    curand_init(threadIdx.x, 0, 0, &state);
+__device__ void deleteDoublons(Individu *population, bool *isDoublon, int *isUnseen, int tailleBloc, int indexDebutBloc)
+{
+     __shared__ int sem;
 
-    randomInit(population + threadIdx.x, &state);
-    updateScore(population + threadIdx.x);
-    __syncthreads();
-    bubble_sort(population);
-    //TODO replace with better sort
-    __syncthreads();
+    for(int current_individu = 0; current_individu < blockDim.x; ++current_individu)
+    {
+        if(population[current_individu].isGonnaDie)
+        {
+            if(threadIdx.x == 0)
+                sem = -1;
+            __syncthreads();
 
+            // Réinitialisation de isDoublon
+            // TODO : voir comment supprimer ça
+            if(threadIdx.x == 0)
+            {
+                for(int j = 0; j < N_CITIES; ++j)
+                {
+                    isDoublon[j] = false;
+                    isUnseen[j] = -1;
+                }
+            }
+            __syncthreads(); // Tous les threads suppriment les doublons de current_individu
+            for(int cityToCheck = indexDebutBloc; cityToCheck < indexDebutBloc + tailleBloc && cityToCheck < N_CITIES; ++cityToCheck)
+            {
+                //isDoublon[cityToCheck] = false;
+                //isUnseen[cityToCheck] = false;
+                bool seen = false;
+                for(int currentCity = 0; currentCity < N_CITIES; ++currentCity)
+                {
+
+                    if(population[current_individu].path_indexes[currentCity] == cityToCheck)
+                    {
+                        if(seen)
+                        {
+                            isDoublon[currentCity] = true;
+                        }
+                        seen = true;
+                    }
+
+                }
+                // Les threads peuvent s'occuper de 0 ou plusieurs villes
+                if(seen == false)
+                {
+                    int it = atomicAdd(&sem, 1);
+                    isUnseen[it] = threadIdx.x;
+                }
+            }
+            //TODO : shuffle unSeen ?
+            __syncthreads();
+            /*
+            //AFFICHAGE
+            if(threadIdx.x == 0)
+            {
+                printf("\nIndividu %d\n", current_individu);
+                printPath(population[current_individu]);
+                for(int i = 0; i < N_CITIES; ++i)
+                {
+                    printf("%2d ", isDoublon[i]);
+                }
+                printf("\n");
+                for(int i = 0; i < N_CITIES; ++i)
+                {
+                    printf("%2d ", isUnseen[i]);
+                }
+            }
+             */
+            // Ici les deux tableaux sont remplis
+            // On remplace les doublons
+
+            if(threadIdx.x == 0)
+                sem = -1;
+            __syncthreads();
+
+            for(int cityToCheck = indexDebutBloc; cityToCheck < indexDebutBloc + tailleBloc && cityToCheck < N_CITIES; ++cityToCheck)
+            {
+                if(isDoublon[cityToCheck])
+                {
+                    int it = atomicAdd(&sem, 1);
+                    population[current_individu].path_indexes[cityToCheck] = isUnseen[it];
+                }
+            }
+            __syncthreads();
+            /*
+            //AFFICHAGE
+            if(threadIdx.x == 0)
+            {
+                printf("\nIndividu %d\n", current_individu);
+                printPath(population[current_individu]);
+            }
+             */
+        }
+    }
+}
+
+__device__ void GenerationLoop(Individu *population, curandState_t *state, bool *isDoublon, int *isUnseen)
+{
+    int tailleBloc = ceil((float)N_CITIES / blockDim.x);
+    int indexDebutBloc = threadIdx.x * tailleBloc;
 
     // Main generation loop
     for(int i = 0; i < N_GENERATION ; i++) {
@@ -89,23 +176,64 @@ __global__ void solve(Individu *migrants) {
 //            migrants[blockIdx.x] = population[blockDim.x-1];
         }
 
-        if(isGonnaDie(&state)) {
+        population[threadIdx.x].isGonnaDie = false;
+        if(isGonnaDie(state)) {
+            population[threadIdx.x].isGonnaDie = true; // TODO : sync with atomicadd instead of struct member
             int parents[3];
-            select_parents(population, &state, parents, 3);
+            select_parents(population, state, parents, 3);
 //            printf("%d is dying. New parents : %d & %d & %d\n", threadIdx.x, parents[0], parents[1], parents[2]);
 //            printPath(population[parents[0]]);
 //            printPath(population[parents[1]]);
 //            printPath(population[parents[2]]);
-            mixParents(population, &state, threadIdx.x, parents, 3);
-//            printPath(population[threadIdx.x]);
+            mixParents(population, state, threadIdx.x, parents, 3);
+            //printPath(population[threadIdx.x]);
         }
-        /*
-        //TODO croisement mutation migration etc
-        updateScore(&population[threadIdx.x]);
         __syncthreads();
-        bubble_sort(population);
-        __syncthreads();
-         */
+
+        deleteDoublons(population, isDoublon, isUnseen, tailleBloc, indexDebutBloc);
+
+        if(threadIdx.x == 0)
+        {
+            for(int j = 0; j < blockDim.x; ++j){
+                if(population[j].isGonnaDie)
+                {
+                    printf("\n%d : ", j);
+                    printPath(population[j]);
+                }
+            }
+        }
+    }
+}
+__global__ void solve(Individu *migrants) {
+    extern __shared__ Individu mem[];
+    Individu *population = mem;
+    int *isUnseen = (int *)&population[blockDim.x];
+    bool *isDoublon = (bool *)&isUnseen[N_CITIES];
+
+
+    if(threadIdx.x == 0){
+        printf("IsDoublon\n");
+        for(int i = 0; i < N_CITIES; ++i)
+        {
+            printf("%d ", isDoublon[i]);
+        }
+        printf("\nIsUnseen\n");
+        for(int i = 0; i < N_CITIES; ++i)
+        {
+            printf("%d ", isUnseen[i]);
+        }
     }
 
+    curandState_t state;
+    curand_init(threadIdx.x, 0, 0, &state);
+
+
+    randomInit(population + threadIdx.x, &state);
+    updateScore(population + threadIdx.x);
+    __syncthreads();
+    bubble_sort(population);
+    //TODO replace with better sort
+    __syncthreads();
+
+    GenerationLoop(population, &state, isDoublon, isUnseen);
 }
