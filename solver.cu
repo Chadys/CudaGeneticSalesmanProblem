@@ -92,10 +92,6 @@ __device__ void print_path(Individu ind) {
 }
 
 __global__ void solve(Individu *migrants) {
-//    extern __shared__ Individu ext[];
-//    Individu *population = ext;
-//    bool *isNotInPath = ext + blockDim.x;
-//    bool *isDoublon = isNotInPath + N_CITIES;
     extern __shared__ Individu population[];
 
     curandState_t state;
@@ -108,9 +104,20 @@ __global__ void solve(Individu *migrants) {
         //fill this block's migrant as soon as possible to be sure first migrant selection from another island won't get an uninitialized individual
         migrants[blockIdx.x] = population[0];
     }
+//    __syncthreads();
+//    if (threadIdx.x == 0) {
+//        for (int i = 0 ; i < blockDim.x ; i++){
+//            printf("thread %d, score %f\n", i, population[i].score);
+//        }
+//    }
     __syncthreads();
-    bubble_sort(population);
-    //TODO replace with better sort
+    merge_sort(population);
+//    __syncthreads();
+//    if (threadIdx.x == 0) {
+//        for (int i = 0 ; i < blockDim.x ; i++){
+//            printf("thread %d, score %f\n", i, population[i].score);
+//        }
+//    }
 
 
     // Main generation loop
@@ -140,6 +147,7 @@ __global__ void solve(Individu *migrants) {
 
         __syncthreads();
         bubble_sort(population);
+        //TODO replace with better specialized sort
     }
 
 }
