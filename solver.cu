@@ -77,24 +77,17 @@ __device__ void deleteDoublons(Individu *population, bool *isDoublon, int *isUns
         if(population[current_individu].isGonnaDie)
         {
             if(threadIdx.x == 0)
-                sem = -1;
+                sem = 0;
             __syncthreads();
 
             // Réinitialisation de isDoublon
-            // TODO : voir comment supprimer ça
-            if(threadIdx.x == 0)
+            for(int cityToCheck = indexDebutBloc; cityToCheck < indexDebutBloc + tailleBloc && cityToCheck < N_CITIES; ++cityToCheck)
             {
-                for(int j = 0; j < N_CITIES; ++j)
-                {
-                    isDoublon[j] = false;
-                    isUnseen[j] = -1;
-                }
+                isDoublon[cityToCheck] = false;
             }
             __syncthreads(); // Tous les threads suppriment les doublons de current_individu
             for(int cityToCheck = indexDebutBloc; cityToCheck < indexDebutBloc + tailleBloc && cityToCheck < N_CITIES; ++cityToCheck)
             {
-                //isDoublon[cityToCheck] = false;
-                //isUnseen[cityToCheck] = false;
                 bool seen = false;
                 for(int currentCity = 0; currentCity < N_CITIES; ++currentCity)
                 {
@@ -113,7 +106,7 @@ __device__ void deleteDoublons(Individu *population, bool *isDoublon, int *isUns
                 if(seen == false)
                 {
                     int it = atomicAdd(&sem, 1);
-                    isUnseen[it] = threadIdx.x;
+                    isUnseen[it] = cityToCheck;
                 }
             }
             //TODO : shuffle unSeen ?
@@ -139,7 +132,7 @@ __device__ void deleteDoublons(Individu *population, bool *isDoublon, int *isUns
             // On remplace les doublons
 
             if(threadIdx.x == 0)
-                sem = -1;
+                sem = 0;
             __syncthreads();
 
             for(int cityToCheck = indexDebutBloc; cityToCheck < indexDebutBloc + tailleBloc && cityToCheck < N_CITIES; ++cityToCheck)
@@ -150,7 +143,6 @@ __device__ void deleteDoublons(Individu *population, bool *isDoublon, int *isUns
                     population[current_individu].path_indexes[cityToCheck] = isUnseen[it];
                 }
             }
-            __syncthreads();
             /*
             //AFFICHAGE
             if(threadIdx.x == 0)
