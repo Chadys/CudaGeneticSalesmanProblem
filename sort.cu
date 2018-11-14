@@ -10,30 +10,39 @@ __device__ void swap(Individu *p, int index1, int index2){
 }
 
 __device__ void fusion(Individu *p, int i, int j, int endj){
-    int endi = j, k = i;
-    int iMoved = 0;
-    while (k < endi && j < endj){
-        if (p[i].score < p[j].score){
-            swap(p, k, i);
-            if (!iMoved)
-                i++;
-            else
-                for (int o=i; o < i+iMoved-1; o++)
-                    swap(p, o, o+1);
-        } else {
-            swap(p, k, j);
-            if (!iMoved){
-                i = j;
+    while (true) {
+        int endi = j, k = i;
+        int iMoved = 0;
+
+        for (;k < endi && j < endj; k++) {
+            if (p[i].score < p[j].score) {
+                if (!iMoved)
+                    i++;
+                else {
+                    swap(p, k, i);
+                    for (int o = i; o < i + iMoved - 1; o++)
+                        swap(p, o, o + 1);
+                }
+            } else {
+                swap(p, k, j);
+                if (!iMoved) {
+                    i = j;
+                }
+                iMoved++;
+                j++;
             }
-            iMoved++;
-            j++;
         }
-        k++;
+        if (k < endi && iMoved) {
+            endj = i + iMoved;
+            j = i;
+            i = k;
+            continue;
+        }
+        else if (i < j && j < endj) {
+            continue;
+        }
+        break;
     }
-    if (k < endi){
-        fusion(p, k, i, i+iMoved);
-    } else if (i < j)
-        fusion(p, i, j, endj);
 }
 
 __device__ void merge_sort(Individu *population){

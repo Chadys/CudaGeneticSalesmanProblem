@@ -104,20 +104,8 @@ __global__ void solve(Individu *migrants) {
         //fill this block's migrant as soon as possible to be sure first migrant selection from another island won't get an uninitialized individual
         migrants[blockIdx.x] = population[0];
     }
-//    __syncthreads();
-//    if (threadIdx.x == 0) {
-//        for (int i = 0 ; i < blockDim.x ; i++){
-//            printf("thread %d, score %f\n", i, population[i].score);
-//        }
-//    }
     __syncthreads();
     merge_sort(population);
-//    __syncthreads();
-//    if (threadIdx.x == 0) {
-//        for (int i = 0 ; i < blockDim.x ; i++){
-//            printf("thread %d, score %f\n", i, population[i].score);
-//        }
-//    }
 
 
     // Main generation loop
@@ -146,7 +134,7 @@ __global__ void solve(Individu *migrants) {
         }
 
         __syncthreads();
-        bubble_sort(population);
+        merge_sort(population);
         //TODO replace with better specialized sort
     }
 
