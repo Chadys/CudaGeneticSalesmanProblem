@@ -106,7 +106,7 @@ __device__ void delete_doublons(Individu *population, bool *isDoublon, int *isUn
             bool seen = false;
             for(int currentCity = 0; currentCity < N_CITIES; ++currentCity) {
 
-                if(population[currentIndividu].path_indexes[currentCity] == cityToCheck) {
+                if(population[currentIndividu].pathIndexes[currentCity] == cityToCheck) {
                     if(seen)
                         isDoublon[currentCity] = true;
                     else
@@ -145,7 +145,7 @@ __device__ void delete_doublons(Individu *population, bool *isDoublon, int *isUn
         for(int cityToCheck = indexDebutBloc; cityToCheck < indexDebutBloc + tailleBloc && cityToCheck < N_CITIES; ++cityToCheck) {
             if(isDoublon[cityToCheck]) {
                 int it = atomicAdd(&sem, 1);
-                population[currentIndividu].path_indexes[cityToCheck] = isUnseen[it];
+                population[currentIndividu].pathIndexes[cityToCheck] = isUnseen[it];
             }
         }
     }
@@ -161,20 +161,20 @@ __device__ void loop_generations(Individu *population, Individu *migrants, curan
         if (threadIdx.x == 0) {
             printf("GENERATION %d\n", i);
             migrants[blockIdx.x] = population[blockDim.x-1]; //export migrant
-            population[0] = select_migrant(migrants, &state); //import migrant
+            population[0] = select_migrant(migrants, state); //import migrant
         }
 
         population[threadIdx.x].isGonnaDie = false;
         if(is_gonna_die(state)) {
             population[threadIdx.x].isGonnaDie = true; // TODO : sync with atomicadd instead of struct member
             int parents[3];
-            select_parents(population, state, parents, 3);
+            select_parents(state, parents, 3);
             mix_parents(population, state, threadIdx.x, parents, 3);
 
-        } else if(is_mutating(&state)) {
+        } else if(is_mutating(state)) {
 //            printf("%d is mutating.\n", threadIdx.x);
             unsigned short citiesToBeExchanged[2];
-            select_mutation(&state, citiesToBeExchanged);
+            select_mutation(state, citiesToBeExchanged);
             swap_cities(population + threadIdx.x, citiesToBeExchanged);
             update_score(&population[threadIdx.x]);
         }
