@@ -197,7 +197,7 @@ __global__ void solve(Individu *migrants) {
     bool *isDoublon = (bool *)&isUnseen[N_CITIES];
 
     curandState_t state;
-    curand_init(threadIdx.x, 0, 0, &state);
+    curand_init(blockIdx.x * blockDim.x + threadIdx.x, 0, 0, &state);
 
     random_init(population + threadIdx.x, &state);
     update_score(population + threadIdx.x);
@@ -210,4 +210,9 @@ __global__ void solve(Individu *migrants) {
     merge_sort(population);
 
     loop_generations(population, migrants, &state, isDoublon, isUnseen);
+
+    if (threadIdx.x == blockDim.x-1) {
+        printf("Best individual for island %d, scores %f\n", blockIdx.x, population[blockDim.x-1].score);
+//        print_path(population[blockDim.x-1]);
+    }
 }
