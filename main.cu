@@ -5,7 +5,7 @@
 
 __constant__ float cities[N_CITIES][2];
 
-int getMaxNbThread(cudaDeviceProp deviceProp){
+int get_nb_max_thread(cudaDeviceProp deviceProp){
     int quantity_in_each_thread = sizeof(Individu) + 10 * sizeof(int);
     int memory_available = deviceProp.sharedMemPerBlock - (N_CITIES * sizeof(bool) + (N_CITIES * sizeof(int)));
 
@@ -35,11 +35,11 @@ int main() {
 
     checkCudaErrors(cudaMemcpyToSymbol(cities, cpu_cities, sizeof(float) * N_CITIES * 2));
     // Init gpu migrants
-    Individu *gpu_migrants; // Les migrants ne sont pas en shared memory car ils sont partagés entre les blocs
+    Individu *gpu_migrants; // Migrants are not in shared memory because they need to be used by all bloc
     checkCudaErrors(cudaMalloc(&gpu_migrants, sizeof(Individu) * N_ISLAND));
 
     // Init threads
-    int nb_threads = getMaxNbThread(deviceProp);
+    int nb_threads = get_nb_max_thread(deviceProp);
     printf("Launching on %d threads\n", nb_threads);
     solve <<<N_ISLAND, nb_threads, (nb_threads * sizeof(Individu)) + (N_CITIES * sizeof(int)) + (N_CITIES * sizeof(bool))>>>(gpu_migrants);
     cudaDeviceSynchronize();

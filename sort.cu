@@ -5,19 +5,47 @@
 //extern __constant__ float cities[N_CITIES][2];
 
 __device__ void swap(Individu *p, int index1, int index2){
+    if (index1 == index2)
+        return;
     Individu tmp = p[index1];
     p[index1] = p[index2];
     p[index2] = tmp;
 }
 
-__device__ void fusion(Individu *p, int i, int m, int n){
-    int j = m, w = i;
-    while (i < m && j < n)
-        swap(p, w++, p[i].score < p[j].score ? i++ : j++);
-    while (i < m)
-        swap(p, w++, i++);
-    while (j < n)
-        swap(p, w++, j++);
+__device__ void fusion(Individu *p, int i, int j, int endj){
+    while (true) {
+        int endi = j, k = i;
+        int iMoved = 0;
+
+        for (;k < endi && j < endj; k++) {
+            if (p[i].score < p[j].score) {
+                if (!iMoved)
+                    i++;
+                else {
+                    swap(p, k, i);
+                    for (int o = i; o < i + iMoved - 1; o++)
+                        swap(p, o, o + 1);
+                }
+            } else {
+                swap(p, k, j);
+                if (!iMoved) {
+                    i = j;
+                }
+                iMoved++;
+                j++;
+            }
+        }
+        if (k < endi && iMoved) {
+            endj = i + iMoved;
+            j = i;
+            i = k;
+            continue;
+        }
+        else if (i < j && j < endj) {
+            continue;
+        }
+        break;
+    }
 }
 
 __device__ void merge_sort(Individu *population){
