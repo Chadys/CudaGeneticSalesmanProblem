@@ -90,63 +90,62 @@ __device__ void print_path(Individu ind) {
 __device__ void delete_doublons(Individu *population, bool *isDoublon, int *isUnseen, int tailleBloc, int indexDebutBloc) {
      __shared__ int sem;
 
-    for(int current_individu = 0; current_individu < blockDim.x; ++current_individu) {
-        if(population[current_individu].isGonnaDie) {
-            if(threadIdx.x == 0)
-                sem = 0;
-            __syncthreads();
+    for(int currentIndividu = 0; currentIndividu < blockDim.x; ++currentIndividu) {
+        if(!population[currentIndividu].isGonnaDie)
+            continue;
+        if(threadIdx.x == 0)
+            sem = 0;
+        __syncthreads();
 
-            // Réinitialisation de isDoublon
-            for(int cityToCheck = indexDebutBloc; cityToCheck < indexDebutBloc + tailleBloc && cityToCheck < N_CITIES; ++cityToCheck) {
-                isDoublon[cityToCheck] = false;
-            }
-            __syncthreads(); // Tous les threads suppriment les doublons de current_individu
-            for(int cityToCheck = indexDebutBloc; cityToCheck < indexDebutBloc + tailleBloc && cityToCheck < N_CITIES; ++cityToCheck) {
-                bool seen = false;
-                for(int currentCity = 0; currentCity < N_CITIES; ++currentCity) {
+        // Réinitialisation de isDoublon
+        for(int cityToCheck = indexDebutBloc; cityToCheck < indexDebutBloc + tailleBloc && cityToCheck < N_CITIES; ++cityToCheck) {
+            isDoublon[cityToCheck] = false;
+        }
+        __syncthreads(); // Every thread delete double in currentIndividu
+        for(int cityToCheck = indexDebutBloc; cityToCheck < indexDebutBloc + tailleBloc && cityToCheck < N_CITIES; ++cityToCheck) {
+            bool seen = false;
+            for(int currentCity = 0; currentCity < N_CITIES; ++currentCity) {
 
-                    if(population[current_individu].path_indexes[currentCity] == cityToCheck) {
-                        if(seen) {
-                            isDoublon[currentCity] = true;
-                        }
+                if(population[currentIndividu].path_indexes[currentCity] == cityToCheck) {
+                    if(seen)
+                        isDoublon[currentCity] = true;
+                    else
                         seen = true;
-                    }
+                }
 
-                }
-                // Les threads peuvent s'occuper de 0 ou plusieurs villes
-                if(seen == false) {
-                    int it = atomicAdd(&sem, 1);
-                    isUnseen[it] = cityToCheck;
-                }
             }
-            //TODO : shuffle unSeen ?
-            __syncthreads();
-            /*
-            //AFFICHAGE
-            if(threadIdx.x == 0) {
-                printf("\nIndividu %d\n", current_individu);
-                printPath(population[current_individu]);
-                for(int i = 0; i < N_CITIES; ++i) {
-                    printf("%2d ", isDoublon[i]);
-                }
-                printf("\n");
-                for(int i = 0; i < N_CITIES; ++i) {
-                    printf("%2d ", isUnseen[i]);
-                }
+            // Les threads peuvent s'occuper de 0 ou plusieurs villes
+            if(seen == false) {
+                int it = atomicAdd(&sem, 1);
+                isUnseen[it] = cityToCheck;
             }
-             */
-            // Ici les deux tableaux sont remplis
-            // On remplace les doublons
+        }
+        //TODO : shuffle unSeen ?
+        __syncthreads();
+        /*
+        //AFFICHAGE
+        if(threadIdx.x == 0) {
+            printf("\nIndividu %d\n", currentIndividu);
+            printPath(population[currentIndividu]);
+            for(int i = 0; i < N_CITIES; ++i) {
+                printf("%2d ", isDoublon[i]);
+            }
+            printf("\n");
+            for(int i = 0; i < N_CITIES; ++i) {
+                printf("%2d ", isUnseen[i]);
+            }
+        }
+         */
+        // Both table are fully initialized, we replace all double
 
-            if(threadIdx.x == 0)
-                sem = 0;
-            __syncthreads();
+        if(threadIdx.x == 0)
+            sem = 0;
+        __syncthreads();
 
-            for(int cityToCheck = indexDebutBloc; cityToCheck < indexDebutBloc + tailleBloc && cityToCheck < N_CITIES; ++cityToCheck) {
-                if(isDoublon[cityToCheck]) {
-                    int it = atomicAdd(&sem, 1);
-                    population[current_individu].path_indexes[cityToCheck] = isUnseen[it];
-                }
+        for(int cityToCheck = indexDebutBloc; cityToCheck < indexDebutBloc + tailleBloc && cityToCheck < N_CITIES; ++cityToCheck) {
+            if(isDoublon[cityToCheck]) {
+                int it = atomicAdd(&sem, 1);
+                population[currentIndividu].path_indexes[cityToCheck] = isUnseen[it];
             }
         }
     }
@@ -171,7 +170,7 @@ __device__ void loop_generations(Individu *population, Individu *migrants, curan
             int parents[3];
             select_parents(population, state, parents, 3);
             mix_parents(population, state, threadIdx.x, parents, 3);
-            update_score(&population[threadIdx.x]);
+
         } else if(is_mutating(&state)) {
 //            printf("%d is mutating.\n", threadIdx.x);
             unsigned short citiesToBeExchanged[2];

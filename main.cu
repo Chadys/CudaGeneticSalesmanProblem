@@ -10,13 +10,13 @@ int get_nb_max_thread(cudaDeviceProp deviceProp){
     int memory_available = deviceProp.sharedMemPerBlock - (N_CITIES * sizeof(bool) + (N_CITIES * sizeof(int)));
 
 
-    int nb_threads = memory_available / quantity_in_each_thread;
+    int nbThreads = memory_available / quantity_in_each_thread;
     int maxThreadsPerBlock = deviceProp.maxThreadsPerBlock;
 
-    if(nb_threads > maxThreadsPerBlock)
-        nb_threads = maxThreadsPerBlock;
+    if(nbThreads > maxThreadsPerBlock)
+        nbThreads = maxThreadsPerBlock;
 
-    return nb_threads;
+    return nbThreads;
 }
 
 int main() {
@@ -26,24 +26,24 @@ int main() {
     cudaGetDeviceProperties(&deviceProp, 0);
 
     // Init random cities
-    float cpu_cities[N_CITIES][2];
+    float cpuCities[N_CITIES][2];
     for(int i = 0; i < N_CITIES; ++i) {
-        cpu_cities[i][0] = (float)rand() / RAND_MAX;
-        cpu_cities[i][1] = (float)rand() / RAND_MAX;
-        //printf("(cpu) %f %f\n", cpu_cities[i][0], cpu_cities[i][1]);
+        cpuCities[i][0] = (float)rand() / RAND_MAX;
+        cpuCities[i][1] = (float)rand() / RAND_MAX;
+        //printf("(cpu) %f %f\n", cpuCities[i][0], cpuCities[i][1]);
     }
 
-    checkCudaErrors(cudaMemcpyToSymbol(cities, cpu_cities, sizeof(float) * N_CITIES * 2));
+    checkCudaErrors(cudaMemcpyToSymbol(cities, cpuCities, sizeof(float) * N_CITIES * 2));
     // Init gpu migrants
-    Individu *gpu_migrants; // Migrants are not in shared memory because they need to be used by all bloc
-    checkCudaErrors(cudaMalloc(&gpu_migrants, sizeof(Individu) * N_ISLAND));
+    Individu *gpuMigrants; // Migrants are not in shared memory because they need to be used by all bloc
+    checkCudaErrors(cudaMalloc(&gpuMigrants, sizeof(Individu) * N_ISLAND));
 
     // Init threads
-    int nb_threads = get_nb_max_thread(deviceProp);
-    printf("Launching on %d threads\n", nb_threads);
-    solve <<<N_ISLAND, nb_threads, (nb_threads * sizeof(Individu)) + (N_CITIES * sizeof(int)) + (N_CITIES * sizeof(bool))>>>(gpu_migrants);
+    int nbThreads = get_nb_max_thread(deviceProp);
+    printf("Launching on %d threads\n", nbThreads);
+    solve <<<N_ISLAND, nbThreads, (nbThreads * sizeof(Individu)) + (N_CITIES * sizeof(int)) + (N_CITIES * sizeof(bool))>>>(gpuMigrants);
     cudaDeviceSynchronize();
-    cudaFree(gpu_migrants);
+    cudaFree(gpuMigrants);
     cudaDeviceReset();
     return 0;
 }
