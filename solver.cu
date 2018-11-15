@@ -5,14 +5,10 @@ __device__ void updateScore(Individu *individu) {
     int prev_index = individu->path_indexes[0];
     for(int i = 1; i < N_CITIES; i++) {
         int current_index = individu->path_indexes[i];
-//        if(threadIdx.x == 0) {
-//            printf("%d %f %f\n", current_index, cities[current_index][0], cities[current_index][1]);
-//        }
         score += pow(cities[current_index][0] - cities[prev_index][0], 2) + pow(cities[current_index][1] - cities[prev_index][1], 2);
         prev_index = current_index;
     }
     individu->score = (float)score;
-    //printf("%d : score = %f\n", threadIdx.x, (float)score);
 }
 
 __device__ bool isGonnaDie(curandState_t *state){
@@ -143,14 +139,6 @@ __device__ void deleteDoublons(Individu *population, bool *isDoublon, int *isUns
                     population[current_individu].path_indexes[cityToCheck] = isUnseen[it];
                 }
             }
-            /*
-            //AFFICHAGE
-            if(threadIdx.x == 0)
-            {
-                printf("\nIndividu %d\n", current_individu);
-                printPath(population[current_individu]);
-            }
-             */
         }
     }
 }
@@ -173,12 +161,7 @@ __device__ void GenerationLoop(Individu *population, curandState_t *state, bool 
             population[threadIdx.x].isGonnaDie = true; // TODO : sync with atomicadd instead of struct member
             int parents[3];
             select_parents(population, state, parents, 3);
-//            printf("%d is dying. New parents : %d & %d & %d\n", threadIdx.x, parents[0], parents[1], parents[2]);
-//            printPath(population[parents[0]]);
-//            printPath(population[parents[1]]);
-//            printPath(population[parents[2]]);
             mixParents(population, state, threadIdx.x, parents, 3);
-            //printPath(population[threadIdx.x]);
         }
         __syncthreads();
 
@@ -201,20 +184,6 @@ __global__ void solve(Individu *migrants) {
     Individu *population = mem;
     int *isUnseen = (int *)&population[blockDim.x];
     bool *isDoublon = (bool *)&isUnseen[N_CITIES];
-
-
-    if(threadIdx.x == 0){
-        printf("IsDoublon\n");
-        for(int i = 0; i < N_CITIES; ++i)
-        {
-            printf("%d ", isDoublon[i]);
-        }
-        printf("\nIsUnseen\n");
-        for(int i = 0; i < N_CITIES; ++i)
-        {
-            printf("%d ", isUnseen[i]);
-        }
-    }
 
     curandState_t state;
     curand_init(threadIdx.x, 0, 0, &state);
