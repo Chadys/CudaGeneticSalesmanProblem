@@ -1,7 +1,7 @@
 import json
 import matplotlib.pyplot as plt
 
-with open('out.json', 'r') as file:
+with open('/tmp/Output.json', 'r') as file:
     graph_object = json.loads(file.read())
 
 for index, island in enumerate(graph_object['islands']):

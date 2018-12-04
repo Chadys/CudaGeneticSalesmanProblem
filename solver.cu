@@ -215,14 +215,9 @@ __global__ void solve(Individu *migrants, int *g_paths) {
 
 
 
-    if(threadIdx.x == 0)
-    {
-        for(int i = 0; i < N_CITIES; ++i)
-        {
+    if(threadIdx.x == 0) {
+        for(int i = 0; i < N_CITIES; ++i) {
             g_paths[blockIdx.x * N_CITIES + i] = population[blockDim.x - 1].pathIndexes[i];
         }
     }
-
-
-
 }

@@ -19,6 +19,27 @@ int get_nb_max_thread(cudaDeviceProp deviceProp){
     return nbThreads;
 }
 
+void save_to_file(float cpuCities[N_CITIES][2], int *paths){
+    FILE *f = fopen("/tmp/Output.json", "w");
+
+    fprintf(f, "{\"cities\":[");
+    for(int i = 0; i < N_CITIES; ++i) {
+        fprintf(f, "\n[%f,%f]%c",
+                cpuCities[i][0], cpuCities[i][1],
+                i == N_CITIES - 1 ? ' ' : ',');
+    }
+    fprintf(f, "],\"islands\":[");
+    for(int i = 0; i < N_ISLAND; ++i){
+        fprintf(f, "\n[");
+        for(int c = 0; c < N_CITIES; ++c){
+            fprintf(f, "%d%c", paths[i * N_ISLAND + c], c == N_CITIES - 1 ? ' ' : ',');
+        }
+        fprintf(f, "]%c", i == N_ISLAND - 1 ? ' ' : ',');
+    }
+    fprintf(f, "]}\n");
+    fclose(f);
+}
+
 int main() {
     // Init CUDA
     cudaSetDevice(0);
@@ -51,27 +72,7 @@ int main() {
     cudaDeviceSynchronize();
     cudaMemcpy(paths, g_paths, sizeof(float) * N_ISLAND * N_CITIES, cudaMemcpyDeviceToHost);
 
-    FILE *f = fopen("/tmp/Output.json", "w");
-    fprintf(f, "{");
-    fprintf(f, "\"cities\":[");
-    for(int i = 0; i < N_CITIES; ++i)
-    {
-        fprintf(f, "\n[");
-        fprintf(f, "%f,%f", cpuCities[i][0], cpuCities[i][1]);
-        fprintf(f, "]%c", i == N_CITIES - 1 ? ' ' : ',');
-    }
-    fprintf(f, "],");
-    fprintf(f, "\"islands\":[");
-    for(int i = 0; i < N_ISLAND; ++i){
-        fprintf(f, "\n[");
-        for(int c = 0; c < N_CITIES; ++c){
-            fprintf(f, "%d%c", paths[i * N_ISLAND + c], c == N_CITIES - 1 ? ' ' : ',');
-        }
-        fprintf(f, "]%c", i == N_ISLAND - 1 ? ' ' : ',');
-    }
-    fprintf(f, "]");
-    fprintf(f, "}");
-    fclose(f);
+    save_to_file(cpuCities, paths);
 
     //frees
     cudaFree(gpuMigrants);
