@@ -1,4 +1,6 @@
 import json
+import matplotlib
+matplotlib.use('agg')
 import matplotlib.pyplot as plt
 
 with open('/tmp/Output.json', 'r') as file:
