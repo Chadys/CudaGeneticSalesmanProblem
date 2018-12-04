@@ -159,7 +159,6 @@ __device__ void loop_generations(Individu *population, Individu *migrants, curan
     for(int i = 0; i < N_GENERATION ; i++) {
         __syncthreads();
         if (threadIdx.x == 0) {
-            printf("GENERATION %d\n", i);
             migrants[blockIdx.x] = population[blockDim.x-1]; //export migrant
             population[0] = select_migrant(migrants, state); //import migrant
         }
@@ -186,6 +185,9 @@ __device__ void loop_generations(Individu *population, Individu *migrants, curan
 
         __syncthreads();
         merge_sort(population);
+        if (threadIdx.x == blockDim.x-1) {
+            printf("Best individual for island %d, generation %d, scores %f\n", blockIdx.x, i, population[blockDim.x-1].score);
+        }
         //TODO replace with better specialized sort
     }
 }
@@ -210,9 +212,4 @@ __global__ void solve(Individu *migrants) {
     merge_sort(population);
 
     loop_generations(population, migrants, &state, isDoublon, isUnseen);
-
-    if (threadIdx.x == blockDim.x-1) {
-        printf("Best individual for island %d, scores %f\n", blockIdx.x, population[blockDim.x-1].score);
-//        print_path(population[blockDim.x-1]);
-    }
 }

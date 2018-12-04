@@ -18,7 +18,7 @@ __device__ void fusion(Individu *p, int i, int j, int endj){
         int iMoved = 0;
 
         for (;k < endi && j < endj; k++) {
-            if (p[i].score < p[j].score) {
+            if (p[i].score > p[j].score) {
                 if (!iMoved)
                     i++;
                 else {
