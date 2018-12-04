@@ -5,6 +5,10 @@ with open('/tmp/Output.json', 'r') as file:
     graph_object = json.loads(file.read())
 
 for index, island in enumerate(graph_object['islands']):
+    plt.title('Result for {} cities, {} islands and {} generations ; island {}'.format(len(graph_object['cities']),
+                                                                                       len(graph_object['islands']),
+                                                                                       graph_object['nGeneration'],
+                                                                                       index))
     fig = plt.figure()
     xdata = []
     ydata = []

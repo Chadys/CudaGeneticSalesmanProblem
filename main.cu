@@ -22,7 +22,7 @@ int get_nb_max_thread(cudaDeviceProp deviceProp){
 void save_to_file(float cpuCities[N_CITIES][2], int *paths){
     FILE *f = fopen("/tmp/Output.json", "w");
 
-    fprintf(f, "{\"cities\":[");
+    fprintf(f, "{\"nGeneration\":%d, \"cities\":[", N_GENERATION);
     for(int i = 0; i < N_CITIES; ++i) {
         fprintf(f, "\n[%f,%f]%c",
                 cpuCities[i][0], cpuCities[i][1],
