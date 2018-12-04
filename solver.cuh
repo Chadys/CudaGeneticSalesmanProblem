@@ -16,6 +16,6 @@ __device__ void swap_cities(Individu *ind, unsigned short *citiesIndex);
 __device__ void print_path(Individu ind);
 __device__ void delete_doublons(Individu *population, bool *isDoublon, int *isUnseen, int tailleBloc, int indexDebutBloc);
 __device__ void loop_generations(Individu *population, Individu *migrants, curandState_t *state, bool *isDoublon, int *isUnseen);
-__global__ void solve(Individu *migrants);
+__global__ void solve(Individu *migrants, int *g_paths);
 
 #endif //CUDAGENETICSALESMANPROBLEM_SOLVER_H

@@ -192,7 +192,7 @@ __device__ void loop_generations(Individu *population, Individu *migrants, curan
     }
 }
 
-__global__ void solve(Individu *migrants) {
+__global__ void solve(Individu *migrants, int *g_paths) {
     extern __shared__ Individu mem[];
     Individu *population = mem;
     int *isUnseen = (int *)&population[blockDim.x];
@@ -212,4 +212,17 @@ __global__ void solve(Individu *migrants) {
     merge_sort(population);
 
     loop_generations(population, migrants, &state, isDoublon, isUnseen);
+
+
+
+    if(threadIdx.x == 0)
+    {
+        for(int i = 0; i < N_CITIES; ++i)
+        {
+            g_paths[blockIdx.x * N_CITIES + i] = population[blockDim.x - 1].pathIndexes[i];
+        }
+    }
+
+
+
 }

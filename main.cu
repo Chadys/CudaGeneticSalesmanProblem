@@ -24,7 +24,7 @@ int main() {
     cudaSetDevice(0);
     cudaDeviceProp deviceProp;
     cudaGetDeviceProperties(&deviceProp, 0);
-
+    srand(0);
     // Init random cities
     float cpuCities[N_CITIES][2];
     for(int i = 0; i < N_CITIES; ++i) {
@@ -32,6 +32,12 @@ int main() {
         cpuCities[i][1] = (float)rand() / RAND_MAX;
         //printf("(cpu) %f %f\n", cpuCities[i][0], cpuCities[i][1]);
     }
+
+
+    int *paths = (int *)malloc(sizeof(int) * N_ISLAND * N_CITIES);
+    int *g_paths;
+    cudaMalloc(&g_paths, sizeof(int) * N_ISLAND * N_CITIES);
+
 
     checkCudaErrors(cudaMemcpyToSymbol(cities, cpuCities, sizeof(float) * N_CITIES * 2));
     // Init gpu migrants
@@ -41,9 +47,37 @@ int main() {
     // Init threads
     int nbThreads = get_nb_max_thread(deviceProp);
     printf("Launching on %d threads\n", nbThreads);
-    solve <<<N_ISLAND, nbThreads, (nbThreads * sizeof(Individu)) + (N_CITIES * sizeof(int)) + (N_CITIES * sizeof(bool))>>>(gpuMigrants);
+    solve <<<N_ISLAND, nbThreads, (nbThreads * sizeof(Individu)) + (N_CITIES * sizeof(int)) + (N_CITIES * sizeof(bool))>>>(gpuMigrants, g_paths);
     cudaDeviceSynchronize();
+    cudaMemcpy(paths, g_paths, sizeof(float) * N_ISLAND * N_CITIES, cudaMemcpyDeviceToHost);
+
+    FILE *f = fopen("/tmp/Output.json", "w");
+    fprintf(f, "{");
+    fprintf(f, "\"cities\":[");
+    for(int i = 0; i < N_CITIES; ++i)
+    {
+        fprintf(f, "\n[");
+        fprintf(f, "%f,%f", cpuCities[i][0], cpuCities[i][1]);
+        fprintf(f, "]%c", i == N_CITIES - 1 ? ' ' : ',');
+    }
+    fprintf(f, "],");
+    fprintf(f, "\"islands\":[");
+    for(int i = 0; i < N_ISLAND; ++i){
+        fprintf(f, "\n[");
+        for(int c = 0; c < N_CITIES; ++c){
+            fprintf(f, "%d%c", paths[i * N_ISLAND + c], c == N_CITIES - 1 ? ' ' : ',');
+        }
+        fprintf(f, "]%c", i == N_ISLAND - 1 ? ' ' : ',');
+    }
+    fprintf(f, "]");
+    fprintf(f, "}");
+    fclose(f);
+
+    //frees
     cudaFree(gpuMigrants);
+    cudaFree(g_paths);
+    free(paths);
+
     cudaDeviceReset();
     return 0;
 }

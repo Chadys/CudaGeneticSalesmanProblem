@@ -4,8 +4,8 @@
 #include <curand_kernel.h>
 #include <stdio.h>
 #define N_CITIES 50
-#define N_ISLAND 1
-#define N_GENERATION 100
+#define N_ISLAND 5
+#define N_GENERATION 10
 
 #define PROBA_K 30.0
 #define PROBA_SELECTION 0.2
