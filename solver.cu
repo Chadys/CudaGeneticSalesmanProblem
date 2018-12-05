@@ -213,7 +213,7 @@ __global__ void solve(Individu *migrants, int *g_paths) {
 
     loop_generations(population, migrants, &state, isDoublon, isUnseen);
 
-
+    __syncthreads();
 
     if(threadIdx.x == 0) {
         for(int i = 0; i < N_CITIES; ++i) {
